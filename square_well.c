@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include "avl_tree.h"
 
 typedef struct {
 	int height;
@@ -10,26 +11,9 @@ typedef struct {
 }
 cell_t;
 
-typedef struct node_s node_t;
-
-struct node_s {
-	cell_t *cell;
-	int height;
-	node_t *left;
-	node_t *right;
-};
-
 int read_cell(cell_t *, int, int);
+int compare_cells(void *, void *);
 int insert_cell(cell_t *);
-node_t *insert_node(node_t *, cell_t *);
-node_t *new_node(cell_t *);
-node_t *delete_node(node_t *, cell_t *);
-node_t *get_node_min(node_t *);
-int get_node_balance(node_t *);
-node_t *right_rotate(node_t *);
-node_t *left_rotate(node_t *);
-void set_node_height(node_t *);
-void free_node(node_t *);
 
 int cells_n, *used;
 cell_t *source_cell;
@@ -76,6 +60,7 @@ int main(void) {
 	}
 	for (cells_idx = 0; cells_idx < cells_n && cells[cells_idx].height != target_height; cells_idx++);
 	target_cell = cells+cells_idx;
+	compare_keys = compare_cells;
 	nodes = NULL;
 	if (!insert_cell(source_cell)) {
 		free(used);
@@ -86,7 +71,7 @@ int main(void) {
 	source_height = 1;
 	source_size = 0;
 	do {
-		min_cell = get_node_min(nodes)->cell;
+		min_cell = (cell_t *)get_node_min(nodes)->key;
 		if (min_cell->height < source_height) {
 			cube_meters += source_height-min_cell->height;
 		}
@@ -176,6 +161,11 @@ int read_cell(cell_t *cell, int row, int column) {
 	return 1;
 }
 
+int compare_cells(void *a, void *b) {
+	cell_t *cell_a = (cell_t *)a, *cell_b = (cell_t *)b;
+	return cell_a->height-cell_b->height;
+}
+
 int insert_cell(cell_t *cell) {
 	if (!cell->inserted) {
 		node_t *nodes_tmp = insert_node(nodes, cell);
@@ -186,208 +176,4 @@ int insert_cell(cell_t *cell) {
 		cell->inserted = 1;
 	}
 	return 1;
-}
-
-node_t *insert_node(node_t *node, cell_t *cell) {
-int balance;
-	if (!node) {
-		return new_node(cell);
-	}
-	if (cell->height < node->cell->height) {
-		node->left = insert_node(node->left, cell);
-	}
-	else {
-		node->right = insert_node(node->right, cell);
-	}
-	set_node_height(node);
-	balance = get_node_balance(node);
-	if (balance > 1) {
-		if (cell->height < node->left->cell->height) {
-			return right_rotate(node);
-		}
-		else if (cell->height > node->left->cell->height) {
-			node->left = left_rotate(node->left);
-			return right_rotate(node);
-		}
-		else {
-			return node;
-		}
-	}
-	else if (balance < -1) {
-		if (cell->height > node->right->cell->height) {
-			return left_rotate(node);
-		}
-		else if (cell->height < node->right->cell->height) {
-			node->right = right_rotate(node->right);
-			return left_rotate(node);
-		}
-		else {
-			return node;
-		}
-	}
-	else {
-		return node;
-	}
-}
-
-node_t *new_node(cell_t *cell) {
-node_t *node = malloc(sizeof(node_t));
-	if (node) {
-		node->cell = cell;
-		node->height = 1;
-		node->left = NULL;
-		node->right = NULL;
-	}
-	else {
-		fprintf(stderr, "Could not allocate memory for new node\n");
-	}
-	return node;
-}
-
-node_t *delete_node(node_t *node, cell_t *cell) {
-int balance, balance_child;
-node_t *tmp;
-	if (!node) {
-		return node;
-	}
-	if (cell->height < node->cell->height) {
-		node->left = delete_node(node->left, cell);
-	}
-	else if (cell->height > node->cell->height) {
-		node->right = delete_node(node->right, cell);
-	}
-	else {
-		if (node->left) {
-			if (node->right) {
-				tmp = get_node_min(node->right);
-				node->cell = tmp->cell;
-				node->right = delete_node(node->right, tmp->cell);
-			}
-			else {
-				tmp = node->left;
-				*node = *tmp;
-				free(tmp);
-			}
-		}
-		else {
-			if (node->right) {
-				tmp = node->right;
-				*node = *tmp;
-			}
-			else {
-				tmp = node;
-				node = NULL;
-			}
-			free(tmp);
-		}
-	}
-	if (!node) {
-		return node;
-	}
-	set_node_height(node);
-	balance = get_node_balance(node);
-	if (balance > 1) {
-		balance_child = get_node_balance(node->left);
-		if (balance_child >= 0) {
-			return right_rotate(node);
-		}
-		else {
-			node->left = left_rotate(node->left);
-			return right_rotate(node);
-		}
-	}
-	else if (balance < -1) {
-		balance_child = get_node_balance(node->right);
-		if (balance_child <= 0) {
-			return left_rotate(node);
-		}
-		else {
-			node->right = right_rotate(node->right);
-			return left_rotate(node);
-		}
-	}
-	else {
-		return node;
-	}
-}
-
-node_t *get_node_min(node_t *node) {
-	while (node->left) {
-		node = node->left;
-	}
-	return node;
-}
-
-int get_node_balance(node_t *node) {
-	if (node) {
-		if (node->left) {
-			if (node->right) {
-				return node->left->height-node->right->height;
-			}
-			else {
-				return node->left->height;
-			}
-		}
-		else {
-			if (node->right) {
-				return -node->right->height;
-			}
-			else {
-				return 0;
-			}
-		}
-	}
-	else {
-		return 0;
-	}
-}
-
-node_t *right_rotate(node_t *node) {
-node_t *left = node->left, *left_right = left->right;
-	left->right = node;
-	node->left = left_right;
-	set_node_height(node);
-	set_node_height(left);
-	return left;
-}
-
-node_t *left_rotate(node_t *node) {
-node_t *right = node->right, *right_left = right->left;
-	right->left = node;
-	node->right = right_left;
-	set_node_height(node);
-	set_node_height(right);
-	return right;
-}
-
-void set_node_height(node_t *node) {
-	if (node->left) {
-		if (node->right) {
-			if (node->left->height < node->right->height) {
-				node->height = node->right->height+1;
-			}
-			else {
-				node->height = node->left->height+1;
-			}
-		}
-		else {
-			node->height = node->left->height+1;
-		}
-	}
-	else {
-		if (node->right) {
-			node->height = node->right->height+1;
-		}
-		else {
-			node->height = 1;
-		}
-	}
-}
-
-void free_node(node_t *node) {
-	if (node) {
-		free_node(node->left);
-		free_node(node->right);
-		free(node);
-	}
 }
