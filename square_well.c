@@ -86,19 +86,7 @@ int main(void) {
 			free(cells);
 			return EXIT_FAILURE;
 		}
-		if (min_cell->row > 0 && min_cell->column > 0 && !insert_cell(min_cell-columns_n-1)) {
-			free_node(nodes);
-			free(used);
-			free(cells);
-			return EXIT_FAILURE;
-		}
 		if (min_cell->row > 0 && !insert_cell(min_cell-columns_n)) {
-			free_node(nodes);
-			free(used);
-			free(cells);
-			return EXIT_FAILURE;
-		}
-		if (min_cell->row > 0 && min_cell->column < columns_n-1 && !insert_cell(min_cell-columns_n+1)) {
 			free_node(nodes);
 			free(used);
 			free(cells);
@@ -110,19 +98,7 @@ int main(void) {
 			free(cells);
 			return EXIT_FAILURE;
 		}
-		if (min_cell->row < rows_n-1 && min_cell->column < columns_n-1 && !insert_cell(min_cell+columns_n+1)) {
-			free_node(nodes);
-			free(used);
-			free(cells);
-			return EXIT_FAILURE;
-		}
 		if (min_cell->row < rows_n-1 && !insert_cell(min_cell+columns_n)) {
-			free_node(nodes);
-			free(used);
-			free(cells);
-			return EXIT_FAILURE;
-		}
-		if (min_cell->row < rows_n-1 && min_cell->column > 0 && !insert_cell(min_cell+columns_n-1)) {
 			free_node(nodes);
 			free(used);
 			free(cells);
