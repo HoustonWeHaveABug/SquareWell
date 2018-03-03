@@ -13,14 +13,17 @@ cell_t;
 
 int read_cell(cell_t *, int, int);
 int compare_cells(void *, void *);
+int insert_neighbours(cell_t *);
+int insert_lower_neighbours(cell_t *, int);
+int insert_lower_cell(cell_t *, int);
 int insert_cell(cell_t *);
 
-int cells_n, *used;
+int rows_n, columns_n, cells_n, *used;
 cell_t *source_cell;
 node_t *nodes;
 
 int main(void) {
-	int rows_n, columns_n, row, column, target_height, cells_idx, source_height, source_size;
+	int row, column, target_height, cells_idx, source_height, source_size;
 	int64_t cube_meters;
 	cell_t *cells, *target_cell, *min_cell;
 	if (scanf("%d%d", &rows_n, &columns_n) != 2 || rows_n < 1 || columns_n < 1) {
@@ -80,25 +83,7 @@ int main(void) {
 			source_height = min_cell->height;
 		}
 		source_size++;
-		if (min_cell->column > 0 && !insert_cell(min_cell-1)) {
-			free_node(nodes);
-			free(used);
-			free(cells);
-			return EXIT_FAILURE;
-		}
-		if (min_cell->row > 0 && !insert_cell(min_cell-columns_n)) {
-			free_node(nodes);
-			free(used);
-			free(cells);
-			return EXIT_FAILURE;
-		}
-		if (min_cell->column < columns_n-1 && !insert_cell(min_cell+1)) {
-			free_node(nodes);
-			free(used);
-			free(cells);
-			return EXIT_FAILURE;
-		}
-		if (min_cell->row < rows_n-1 && !insert_cell(min_cell+columns_n)) {
+		if (!insert_neighbours(min_cell)) {
 			free_node(nodes);
 			free(used);
 			free(cells);
@@ -109,13 +94,36 @@ int main(void) {
 	while (min_cell != target_cell);
 	if (target_cell->height < source_height) {
 		cube_meters -= source_height-target_cell->height-1;
+		source_height = target_cell->height+1;
 	}
 	else {
 		cube_meters += source_size;
+		source_height++;
+	}
+	while (nodes) {
+		min_cell = (cell_t *)get_node_min(nodes)->key;
+		min_cell->inserted = 0;
+		nodes = delete_node(nodes, min_cell);
+	}
+	if (!insert_lower_neighbours(target_cell, source_height)) {
+		free_node(nodes);
+		free(used);
+		free(cells);
+		return EXIT_FAILURE;
+	}
+	while (nodes) {
+		min_cell = (cell_t *)get_node_min(nodes)->key;
+		cube_meters += source_height-min_cell->height;
+		if (!insert_lower_neighbours(min_cell, source_height)) {
+			free_node(nodes);
+			free(used);
+			free(cells);
+			return EXIT_FAILURE;
+		}
+		nodes = delete_node(nodes, min_cell);
 	}
 	printf("%" PRIi64 "\n", cube_meters);
 	fflush(stdout);
-	free_node(nodes);
 	free(used);
 	free(cells);
 	return EXIT_SUCCESS;
@@ -140,6 +148,45 @@ int read_cell(cell_t *cell, int row, int column) {
 int compare_cells(void *a, void *b) {
 	cell_t *cell_a = (cell_t *)a, *cell_b = (cell_t *)b;
 	return cell_a->height-cell_b->height;
+}
+
+int insert_neighbours(cell_t *cell) {
+	if (cell->column > 0 && !insert_cell(cell-1)) {
+		return 0;
+	}
+	if (cell->row > 0 && !insert_cell(cell-columns_n)) {
+		return 0;
+	}
+	if (cell->column < columns_n-1 && !insert_cell(cell+1)) {
+		return 0;
+	}
+	if (cell->row < rows_n-1 && !insert_cell(cell+columns_n)) {
+		return 0;
+	}
+	return 1;
+}
+
+int insert_lower_neighbours(cell_t *cell, int source_height) {
+	if (cell->column > 0 && !insert_lower_cell(cell-1, source_height)) {
+		return 0;
+	}
+	if (cell->row > 0 && !insert_lower_cell(cell-columns_n, source_height)) {
+		return 0;
+	}
+	if (cell->column < columns_n-1 && !insert_lower_cell(cell+1, source_height)) {
+		return 0;
+	}
+	if (cell->row < rows_n-1 && !insert_lower_cell(cell+columns_n, source_height)) {
+		return 0;
+	}
+	return 1;
+}
+
+int insert_lower_cell(cell_t *cell, int source_height) {
+	if (cell->height < source_height) {
+		return insert_cell(cell);
+	}
+	return 1;
 }
 
 int insert_cell(cell_t *cell) {
