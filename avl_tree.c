@@ -143,6 +143,9 @@ int compare;
 }
 
 node_t *get_node_min(node_t *node) {
+	if (!node) {
+		return node;
+	}
 	while (node->left) {
 		node = node->left;
 	}
@@ -150,6 +153,9 @@ node_t *get_node_min(node_t *node) {
 }
 
 node_t *get_node_max(node_t *node) {
+	if (!node) {
+		return node;
+	}
 	while (node->right) {
 		node = node->right;
 	}
